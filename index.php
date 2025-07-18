@@ -13,20 +13,56 @@ if ($mysqli->connect_errno) {
 // Helper functions for comment classification
 function classify_comment($comment)
 {
-    $lc = strtolower($comment);
 
-    if (strpos($lc, 'candy') !== false || strpos($lc, 'smarties') !== false || strpos($lc, 'tootsie') !== false) {
+    // Keywords before the feedback
+    //     if (strpos($lc, 'candy') !== false || strpos($lc, 'smarties') !== false || strpos($lc, 'tootsie') !== false) {
+    //         return 'candy';
+    //     } elseif (preg_match('/\bcall me\b|\bdon\'t call\b|\bdo not call\b|\bplease call\b/i', $comment)) {
+    //         return 'call';
+    //     } elseif (strpos($lc, 'referred') !== false || strpos($lc, 'referred by') !== false) {
+    //         return 'referred';
+    //     } elseif (strpos($lc, 'no signature') !== false || strpos($lc, 'signature required') !== false) {
+    //         return 'signature';
+    //     } else {
+    //         return 'misc';
+    //     }
+
+    /**
+     * 
+     *  1. Found taffy/Taffys as a sneaky ones. (Candy had 13 comments before and now it has 15 comments).
+     *  2. New Category found is "Delivery" and it has 24 comments.
+     * 
+     */
+
+    // Candy-related keywords (positive or negative)
+    if (preg_match('/\b(candy|smarties|tootsie|taffy|taffys|chocolate)\b/i', $comment)) {
         return 'candy';
-    } elseif (preg_match('/\bcall me\b|\bdon\'t call\b|\bdo not call\b|\bplease call\b/i', $comment)) {
-        return 'call';
-    } elseif (strpos($lc, 'referred') !== false || strpos($lc, 'referred by') !== false) {
-        return 'referred';
-    } elseif (strpos($lc, 'no signature') !== false || strpos($lc, 'signature required') !== false) {
-        return 'signature';
-    } else {
-        return 'misc';
     }
+
+    // Call / Do not call related phrases
+    if (preg_match('/\b(call me|don\'t call|do not call|please call|no calls?)\b/i', $comment)) {
+        return 'call';
+    }
+
+    // Referral / recommendation based comments
+    if (preg_match('/\b(referred|referral|told me about|recommended by)\b/i', $comment)) {
+        return 'referred';
+    }
+
+    // Signature requirements (presence or waiver)
+    if (preg_match('/\b(signature (required|not required|waived|needed)|no signature|required signature|without signature)\b/i', $comment)) {
+        return 'signature';
+    }
+
+    // Delivery-specific instructions
+    if (preg_match('/\b(leave at|leave on|porch|back door|front door|entryway|mailroom|garage|reception|deliver to|delivery note|hold shipping)\b/i', $comment)) {
+        return 'delivery';
+    }
+
+    // Everything else
+    return 'misc';
 }
+
 
 // Task 1: Categorizing and displaying customer's comments.
 $result = $mysqli->query("SELECT orderid, comments FROM sweetwater_test");
@@ -36,6 +72,7 @@ $grouped = [
     'call' => [],
     'referred' => [],
     'signature' => [],
+    'delivery' => [],
     'misc' => [],
 ];
 
@@ -97,7 +134,9 @@ while ($row = $result->fetch_assoc()) {
 
     <?php foreach ($grouped as $category => $entries): ?>
         <div class="category">
-            <h2><?= ucfirst($category) ?> Comments (<?= count($entries) ?>)</h2>
+            <h2>
+                <?= ucfirst($category)=="Call" ? "Call/ Don't Call" : ucfirst($category) ?> Comments (<?= count($entries) ?>)
+            </h2>
             <ul>
                 <?php foreach ($entries as $entry): ?>
                     <li><strong>Order #<?= $entry['orderid'] ?>:</strong> <?= nl2br(htmlspecialchars($entry['comments'])) ?></li>
